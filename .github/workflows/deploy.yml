@@ -12,22 +12,15 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     container:
-      image: almalinux:8.10 # Build inside AlmaLinux 8.10 container
+      image: almalinux:8.10
 
     steps:
-      # Install Go, make, and git inside AlmaLinux
-      - name: Install dependencies for build
+      - name: Install dependencies
         run: |
-          dnf -y install epel-release
           dnf -y install golang make git
 
-      # Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # Verify Go version
-      - name: Check Go version
-        run: go version
 
       # Install project dependencies
       - name: Install project deps
@@ -35,7 +28,7 @@ jobs:
 
       # Build project
       - name: Build project
-        run: make build
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/main ./main.go
 
       # Verify output exists
       - name: Verify build output
