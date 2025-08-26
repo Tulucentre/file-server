@@ -45,16 +45,17 @@ jobs:
       # Stop existing pm2 process
       - name: Stop existing pm2 process
         run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
             'pm2 stop file-server || true; [ -f /home/tulucentre/main ] && rm -f /home/tulucentre/main || true'
 
       # Copy files to server
       - name: Copy files to server
         run: |
-          scp -i ~/.ssh/id_rsa ./bin/main ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }}:/home/tulucentre/
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ./bin/main \
+            ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }}:/home/tulucentre/
 
       # Restart pm2 process
       - name: Restart pm2 process
         run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
-            'pm2 start /home/tulucentre/main --name file-server || pm2 restart file-server'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
+            'pm2 restart file-server'
