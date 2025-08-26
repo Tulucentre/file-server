@@ -36,16 +36,27 @@ jobs:
         run: ls -lh ./bin/main
 
       # Deploy to server
+      # Setup SSH key
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.TULUCENTRE_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.TULUCENTRE_SERVER_IP }} >> ~/.ssh/known_hosts
+
+      # Stop existing pm2 process
       - name: Stop existing pm2 process
         run: |
-          sshpass -p "${{ secrets.TULUCENTRE_SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
+          ssh -i ~/.ssh/id_rsa ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
             'pm2 stop file-server || true; [ -f /home/tulucentre/main ] && rm /home/tulucentre/main || true'
 
+      # Copy files to server
       - name: Copy files to server
         run: |
-          scp -o StrictHostKeyChecking=no ./bin/main ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }}:/home/tulucentre
+          scp -i ~/.ssh/id_rsa ./bin/main ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }}:/home/tulucentre/
 
+      # Restart pm2 process
       - name: Restart pm2 process
         run: |
-          sshpass -p "${{ secrets.TULUCENTRE_SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
-            'pm2 start file-server'
+          ssh -i ~/.ssh/id_rsa ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
+            'pm2 restart file-server'
