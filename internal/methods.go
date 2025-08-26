@@ -10,24 +10,30 @@ import (
 )
 
 var (
-	ROOT_PATH string
-	PORT      string = "8080"
-	once      sync.Once
+	ROOT_PATH     string
+	PORT          string = "8080"
+	SERVER_SECRET string
+	once          sync.Once
 )
 
 func GetRootPath() {
 	once.Do(func() {
-		ROOT_PATH = os.Getenv("ROOT_DIR")
+		ROOT_PATH = os.Getenv("DATA_DIR")
+		SERVER_SECRET = os.Getenv("FILE_SERVER_SECRET")
+
+		if SERVER_SECRET == "" {
+			panic("FILE_SERVER_SECRET environment variable is not set")
+		}
 
 		if ROOT_PATH == "" {
-			panic("ROOT_DIR environment variable is not set")
+			panic("DATA_DIR environment variable is not set")
 		}
 
-		if os.Getenv("PORT") != "" {
-			PORT = os.Getenv("PORT")
+		if os.Getenv("FILE_SERVER_PORT") != "" {
+			PORT = os.Getenv("FILE_SERVER_PORT")
 		}
-		fmt.Printf("Using ROOT_DIR: %s\n", ROOT_PATH)
-		fmt.Printf("Using PORT: %s\n", PORT)
+		fmt.Printf("Using DATA_DIR: %s\n", ROOT_PATH)
+		fmt.Printf("Using FILE_SERVER_PORT: %s\n", PORT)
 	})
 }
 
@@ -39,7 +45,7 @@ func GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeFile(w, r, filePath)
+	http.ServeFile(w, r, ROOT_PATH+filePath)
 }
 
 func AddFile(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +61,13 @@ func AddFile(w http.ResponseWriter, r *http.Request) {
 
 	file, _, err := r.FormFile("file")
 	path := r.FormValue("path")
+	secret := r.FormValue("secret")
 	path = ROOT_PATH + path
+
+	if secret != SERVER_SECRET {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	if err != nil {
 		http.Error(w, "Failed to retrieve file from form data", http.StatusBadRequest)

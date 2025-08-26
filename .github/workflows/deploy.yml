@@ -1,0 +1,65 @@
+name: Build and Deploy Go Project
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Go
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.24.3
+
+      # Install dependencies
+      - name: Install dependencies
+        run: make install
+
+      # Build project
+      - name: Build project
+        run: make build
+
+      # Verify output exists
+      - name: Verify build output
+        run: ls -lh ./bin/main
+
+      # Deploy to server
+      - name: Deploy application
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.TULUCENTRE_SERVER_IP }}
+          username: ${{ vars.TULUCENTRE_SERVER_USER }}
+          password: ${{ secrets.TULUCENTRE_SERVER_PASSWORD }}
+          script: |
+            pm2 stop file-server || true
+            rm -f /home/tulucentre/main
+
+      - name: Copy build output
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.TULUCENTRE_SERVER_IP }}
+          username: ${{ vars.TULUCENTRE_SERVER_USER }}
+          password: ${{ secrets.TULUCENTRE_SERVER_PASSWORD }}
+          source: "./bin/main"
+          target: "/home/tulucentre/"
+
+      - name: Restart pm2 process
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.TULUCENTRE_SERVER_IP }}
+          username: ${{ vars.TULUCENTRE_SERVER_USER }}
+          password: ${{ secrets.TULUCENTRE_SERVER_PASSWORD }}
+          script: |
+            pm2 start file-server
