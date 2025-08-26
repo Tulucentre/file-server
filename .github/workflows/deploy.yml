@@ -15,23 +15,19 @@ jobs:
       image: almalinux:8.10 # Build inside AlmaLinux 8.10 container
 
     steps:
-      # Install required system tools
-      - name: Install system dependencies
+      # Install Go, make, and git inside AlmaLinux
+      - name: Install dependencies for build
         run: |
-          dnf -y install wget tar make git
-
-      # Install Go 1.24.3 manually
-      - name: Install Go 1.24.3
-        run: |
-          wget https://go.dev/dl/go1.24.3.linux-amd64.tar.gz
-          tar -C /usr/local -xzf go1.24.3.linux-amd64.tar.gz
-          echo "export PATH=/usr/local/go/bin:$PATH" >> ~/.bashrc
-          echo "/usr/local/go/bin" >> $GITHUB_PATH
-          go version
+          dnf -y install epel-release
+          dnf -y install golang make git
 
       # Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # Verify Go version
+      - name: Check Go version
+        run: go version
 
       # Install project dependencies
       - name: Install project deps
