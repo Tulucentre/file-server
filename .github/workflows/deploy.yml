@@ -44,7 +44,7 @@ jobs:
           password: ${{ secrets.TULUCENTRE_SERVER_PASSWORD }}
           script: |
             pm2 stop file-server || true
-            rm -f /home/tulucentre/main
+            [ -f /home/tulucentre/main ] && rm /home/tulucentre/main
 
       - name: Copy build output
         uses: appleboy/scp-action@v0.1.7
