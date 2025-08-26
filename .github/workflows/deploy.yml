@@ -24,11 +24,11 @@ jobs:
 
       # Install project dependencies
       - name: Install project deps
-        run: make install
+        run: go install -buildvcs=false
 
       # Build project
       - name: Build project
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/main ./main.go
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -o ./bin/main ./main.go
 
       # Verify output exists
       - name: Verify build output
