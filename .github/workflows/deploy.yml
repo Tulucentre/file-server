@@ -36,30 +36,16 @@ jobs:
         run: ls -lh ./bin/main
 
       # Deploy to server
-      - name: Deploy application
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.TULUCENTRE_SERVER_IP }}
-          username: ${{ secrets.TULUCENTRE_SERVER_USER }}
-          password: ${{ secrets.TULUCENTRE_SERVER_PASSWORD }}
-          script: |
-            pm2 stop file-server || true
-            [ -f /home/tulucentre/main ] && rm /home/tulucentre/main
+      - name: Stop existing pm2 process
+        run: |
+          sshpass -p "${{ secrets.TULUCENTRE_SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
+            'pm2 stop file-server || true; [ -f /home/tulucentre/main ] && rm /home/tulucentre/main || true'
 
-      - name: Copy build output
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.TULUCENTRE_SERVER_IP }}
-          username: ${{ secrets.TULUCENTRE_SERVER_USER }}
-          password: ${{ secrets.TULUCENTRE_SERVER_PASSWORD }}
-          source: "./bin/main"
-          target: "/home/tulucentre/"
+      - name: Copy files to server
+        run: |
+          scp -o StrictHostKeyChecking=no ./bin/main ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }}:/home/tulucentre
 
       - name: Restart pm2 process
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.TULUCENTRE_SERVER_IP }}
-          username: ${{ secrets.TULUCENTRE_SERVER_USER }}
-          password: ${{ secrets.TULUCENTRE_SERVER_PASSWORD }}
-          script: |
-            pm2 start file-server
+        run: |
+          sshpass -p "${{ secrets.TULUCENTRE_SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
+            'pm2 start file-server'
