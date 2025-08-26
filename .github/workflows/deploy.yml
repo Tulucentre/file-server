@@ -11,32 +11,41 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    container:
+      image: almalinux:8.10 # Build inside AlmaLinux 8.10 container
 
     steps:
+      # Install required system tools
+      - name: Install system dependencies
+        run: |
+          dnf -y install wget tar make git
+
+      # Install Go 1.24.3 manually
+      - name: Install Go 1.24.3
+        run: |
+          wget https://go.dev/dl/go1.24.3.linux-amd64.tar.gz
+          tar -C /usr/local -xzf go1.24.3.linux-amd64.tar.gz
+          echo "export PATH=/usr/local/go/bin:$PATH" >> ~/.bashrc
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+          go version
+
       # Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Set up Go
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.24.3
-
-      # Install dependencies
-      - name: Install dependencies
+      # Install project dependencies
+      - name: Install project deps
         run: make install
 
       # Build project
       - name: Build project
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/main ./cmd/main.go
+        run: make build
 
       # Verify output exists
       - name: Verify build output
         run: ls -lh ./bin/main
 
-      # Deploy to server
-      # Setup SSH key
+      # Setup SSH key for deploy
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -48,7 +57,7 @@ jobs:
       - name: Stop existing pm2 process
         run: |
           ssh -i ~/.ssh/id_rsa ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
-            'pm2 stop file-server || true; [ -f /home/tulucentre/main ] && rm /home/tulucentre/main || true'
+            'pm2 stop file-server || true; [ -f /home/tulucentre/main ] && rm -f /home/tulucentre/main || true'
 
       # Copy files to server
       - name: Copy files to server
@@ -59,4 +68,4 @@ jobs:
       - name: Restart pm2 process
         run: |
           ssh -i ~/.ssh/id_rsa ${{ secrets.TULUCENTRE_SERVER_USER }}@${{ secrets.TULUCENTRE_SERVER_IP }} \
-            'pm2 restart file-server'
+            'pm2 start /home/tulucentre/main --name file-server || pm2 restart file-server'
